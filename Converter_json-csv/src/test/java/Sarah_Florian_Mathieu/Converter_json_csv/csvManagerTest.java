@@ -38,13 +38,13 @@ public class csvManagerTest {
 	public void testAllPossibleSeparators() {
 		csvManager c1 = new csvManager();
 		c1.setSeparator(';');
+		c1.setSeparator(',');
 		c1.setSeparator('|');
 		c1.setSeparator('#');
 		c1.setSeparator('/');
-		c1.setSeparator('_');
 		c1.setSeparator('&');
-		c1.setSeparator('~');
 		c1.setSeparator(':');
+		c1.setSeparator(' ');
 		c1.setDecimalSeparator(',');
 		c1.setDecimalSeparator('.');
 		assert true;
