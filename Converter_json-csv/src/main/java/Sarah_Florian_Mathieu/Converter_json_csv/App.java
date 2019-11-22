@@ -12,4 +12,6 @@ public enum App
     {
         System.out.println( "Hello World!" );
     }
+    
+    csvManager m = new csvManager();
 }
