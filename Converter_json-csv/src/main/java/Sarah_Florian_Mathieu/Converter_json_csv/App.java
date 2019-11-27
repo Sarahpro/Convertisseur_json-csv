@@ -1,7 +1,9 @@
 package Sarah_Florian_Mathieu.Converter_json_csv;
 
+
 /**
- * Hello world!
+ * ne sert à rien
+ * @author user
  *
  */
 public enum App 
@@ -10,7 +12,7 @@ public enum App
 	
     public static void main( String[] args )
     {
-        System.out.println( "Hello World!" );
+        
     }
     
     csvManager m = new csvManager();

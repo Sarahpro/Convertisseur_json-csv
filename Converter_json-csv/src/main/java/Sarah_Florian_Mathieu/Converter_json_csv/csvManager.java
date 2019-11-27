@@ -1,5 +1,6 @@
 package Sarah_Florian_Mathieu.Converter_json_csv;
 
+import java.io.EOFException;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
@@ -10,6 +11,8 @@ public class csvManager {
 	private static final String dimSeparator = "__|__";
 	private char separator;
 	private char decimalSeparator;
+	
+	//  --> csv[size1D][size2D]
 	private String[][] csv = null;
 	private int size1D;
 	private int size2D;
@@ -30,7 +33,6 @@ public class csvManager {
 			checkValidSeparator();
 		}
 		catch(IllegalArgumentException e) {
-			System.out.println("Separator for decimal already use this separator character");
 			e.getLocalizedMessage();
 		}
 	}
@@ -45,11 +47,46 @@ public class csvManager {
 			checkValidSeparator();
 		}
 		catch(IllegalArgumentException e) {
-			System.out.println("Separator for compartment already use this separator character");
 			e.getLocalizedMessage();
 		}
 	}
+	
+	public int getSize1D() {
+		return size1D;
+	}
 
+	public int getSize2D() {
+		return size2D;
+	}
+	
+	public String getStringAt(int i, int j) {
+		if(csv != null) {
+			try {
+				return csv[i][j];
+			}
+			catch(ArrayIndexOutOfBoundsException e) {
+				e.printStackTrace();
+				System.err.println("Size is [" + size1D + "][" + size2D + "]");
+				return null;
+			}
+		}
+		else return null;
+	}
+	
+	public String toString() {
+		String s = "";
+		int x,y;
+		
+		if(csv == null) return "csv File is not loaded";
+		
+		for(y = 0; y < size2D; y++) {
+			for(x = 0; x < size1D; x++) {
+				s += csv[x][y] + ',';
+			}
+			s += '\n';
+		}
+		return s;
+	}
 	
 	//constructors
 	
@@ -59,20 +96,22 @@ public class csvManager {
 	 * @param decimalSeparator
 	 * @throws IllegalArgumentException
 	 */
-	csvManager(char separator, char decimalSeparator) throws IllegalArgumentException {
+	public csvManager(char separator, char decimalSeparator) throws IllegalArgumentException {
 		this.separator = separator;
 		this.decimalSeparator = decimalSeparator;
 		
 		checkValidSeparator();
 		
 		csv = null;
+		size1D = 0;
+		size2D = 0;
 	}
 	
 	/**
 	 * Construction of csvManager with English separators
 	 * @throws IllegalArgumentException
 	 */
-	csvManager() throws IllegalArgumentException {
+	public csvManager() throws IllegalArgumentException {
 		this(',', '.');
 	}
 	
@@ -109,8 +148,9 @@ public class csvManager {
 	 * @param path which file to process
 	 * @throws IllegalArgumentException
 	 * @throws IOException
+	 * @throws NonReadableCsvFileException 
 	 */
-	public void loadFile(String path) throws IllegalArgumentException, IOException {
+	public void loadFile(String path) throws IllegalArgumentException, IOException, NonReadableCsvFileException {
 		checkPath(path);
 		calculSizeTab(path);
 		readFile(path);
@@ -134,7 +174,7 @@ public class csvManager {
 		
 		File f = new File(path);
 		if(f.exists() == false) {
-			System.err.println("File " + path + "not found");
+			System.err.println("File " + path + " not found");
 			throw new FileNotFoundException();
 		}
 		if(f.canRead() == false) {
@@ -146,27 +186,29 @@ public class csvManager {
 	/**
 	 * computes table size from file with separators and rows
 	 * @param path which file to process
-	 * @throws IOException
+	 * @throws NonReadableCsvFileException 
+	 * @throws IOException 
 	 */
-	private void calculSizeTab(String path) throws IOException {
+	private void calculSizeTab(String path) throws NonReadableCsvFileException, IOException {
 		FileReader fr = null;
 		fr = new FileReader(path);
-		char c = 0;
+		int c = 0;
 		
 		//calcul de size1D
 		boolean ignore = false;
 		int cptSeparator = 0;
 		while(c != '\n' && c != -1) {
-			c = (char)fr.read();
+			c = fr.read();
 			if(c == separator && !ignore) cptSeparator++;
 			if(c == '"')ignore = !ignore;
-			if(c == '\\') c = (char)fr.read();
+			if(c == '\\') c = fr.read();
 		}
 		//fin de calcul de size1D
 		
-		if(c == -1) {
+		if(cptSeparator == 0) {
 			fr.close();
-			throw new IOException();
+			System.err.println("Empty File");
+			throw new NonReadableCsvFileException();
 		}
 		
 		//calcul de size2D
@@ -175,7 +217,7 @@ public class csvManager {
 		while (c != -1) {
 			c = 0;
 			while(c != '\n' && c != -1) {
-				c = (char)fr.read();
+				c = fr.read();
 				if(c != '\n' && c != ' ' && c != '\t') emptyLine = false;
 			}
 			if(!emptyLine && c != -1)nbLines++;
@@ -198,31 +240,36 @@ public class csvManager {
 	 * @param i variable that increment on the column
 	 * @param j variable that increment on the row
 	 * @return string containing value AND the last character read that must be removed after
-	 * @throws IOException
+	 * @throws NonReadableCsvFileException 
+	 * @throws IOException 
 	 */
-	private String readFilePartString(FileReader fr, String val, char c, int i, int j) throws IOException {
+	private String readFilePartString(FileReader fr, String val, int c, int i, int j) throws NonReadableCsvFileException, IOException {
 		if(c == '"' && val.length() == 0) { //traitement d'une chaine de caractère
-			while(c != '\n' && c != -1 && c != '"' && (c == ' ' || c == '\t')) {
-				c = (char)fr.read();
+			do {
+				c = fr.read();
 				if(c == '\\') { //traitement d'un caractère précédé d'un <\>
-					c = (char)fr.read();
-					if(c == '"' || c == '\\') val.concat("" + c);
-					else System.err.println("Warning : ignored character at line " + j + ", column " + i);
-					if(c != '\n' && c != -1) c = (char)fr.read();
+					c = fr.read();
+					if(c == '"' || c == '\\') val += c;
+					else System.err.println("Warning : ignored character at line " + j);
+					if(c != '\n' && c != -1) {
+						c = fr.read();
+					}
 				}
-				else if(c == ' ' || c == '\t') { //traitement d'un caractère blanc
-					System.err.println("Warning : ignored tabulation or space character found at line " + j + ", column " + i);
+				if(c == '\n' || c == -1) {
+					System.err.println("Non-readable File, problem found at line " + j);
+					fr.close();
+					throw new NonReadableCsvFileException();
 				}
-				else val.concat("" + c);
-			}
-			c = (char)fr.read();
+				else if(c != '"') val += (char)c;
+			}while(c != '"');
+			c = fr.read();
 			if(c != '\n' && c != -1 && c != separator){ // s'il existe encore des caractères pour la valeur de la case
-				System.err.println("Non-readable File, problem found at line " + j + ", column " + i);
+				System.err.println("Non-readable File, problem found at line " + j);
 				fr.close();
-				throw new IOException();
+				throw new NonReadableCsvFileException();
 			}
 		}
-		return val + c; //afin de retourner le caractère lu avec la chaine
+		return val + (char)c; //afin de retourner le caractère lu avec la chaine
 	}
 	
 	/**
@@ -234,63 +281,80 @@ public class csvManager {
 	 * @param j variable that increment on the row
 	 * @return string containing value AND the last character read that must be removed after
 	 * @throws IOException
+	 * @throws NonReadableCsvFileException 
 	 */
-	private String readFilePartCharacter(FileReader fr, String val, char c, int i, int j) throws IOException {
+	private String readFilePartCharacter(FileReader fr, String val, int c, int [] ite) throws IOException, NonReadableCsvFileException {
+		boolean save = true;
 		if(c == '\\') { //traitement d'un caractère précédé d'un <\>
-			c = (char)fr.read();
-			if(c == '"' || c == '\\') val.concat("" + c);
-			else System.err.println("Warning : only <\\> or <\"> are accepted after <\\>. See at line " + j + ", column " + i);
-			if(c != '\n' && c != -1) c = (char)fr.read();
+			c = fr.read();
+			if(c == '"' || c == '\\') val += (char)c;
+			else System.err.println("Warning : only <\\> or <\"> are accepted after <\\>. See at line " + ite[1]);
+			if(c != '\n' && c != -1) c = fr.read();
 		}
 		
-		if(c == separator) { //traitement du caractère de séparation de colonne
-			i++;
-			if(i == size1D) {
-				System.err.println("too many values to read at line" + j);
+		if(c == separator) { //traitement du caractère de séparation de colonne 
+			csv[ite[0]][ite[1]] = val;
+			val = "";
+			ite[0]++;
+			save = false;
+			if(ite[0] == size1D) {
+				System.err.println("too many values to read at line" + ite[1]);
 				fr.close();
-				throw new IOException();
+				throw new NonReadableCsvFileException();
 			}
 		}
 		if(c == ' ' || c == '\t') { //traitement d'un caractère blanc
-			System.err.println("Warning : ignored tabulation or space character found at line " + j + ", column " + i);
+			System.err.println("Warning : ignored tabulation or space character found at line " + ite[1]);
+			save = false;
 		}
 		if(c == '"' && val.length() > 0) { //si l'on lit une chaine de caractère alors que l'on a déjà lu un bout de valeur
-			System.err.println("Non-readable File, problem found at line " + j + ", column " + i);
+			System.err.println("Non-readable File, problem found at line " + ite[1]);
 			fr.close();
-			throw new IOException();
+			throw new NonReadableCsvFileException();
 		}
-		return val + c;
+		if(c == '\n') save = false;
+		
+		if(save) val += (char)c;
+		
+		return val + (char)c;
 	}
 	
 	/**
 	 * read the csv file and store data in array
 	 * @param path
 	 * @throws IOException
+	 * @throws NonReadableCsvFileException 
 	 */
-	private void readFile(String path) throws IOException {
+	private void readFile(String path) throws IOException, NonReadableCsvFileException {
 		FileReader fr = null;
 		fr = new FileReader(path);
-		char c = 0;
+		int c = 0;
 		String val = "";
-		int i = 0, j = 0;
+		int[] ite = new int[2];
+		ite[0] = ite[1] = 0;
 		
-		while(c != -1) {
+		while(c != -1 && ite[1] != size2D) {
 			while(c != '\n' && c != -1) {
-				c = (char)fr.read();
-				
-				val = readFilePartString(fr, val, c, i, j); //partie traitement d'une chaine de caractère
+				c = fr.read();
+				val = readFilePartString(fr, val, c, ite[0], ite[1]); //partie traitement d'une chaine de caractère
 				c = val.charAt(val.length() - 1); //récupérer le caractère stocké dans la chaine
-				val = val.substring(0, val.length() - 1); //on retire le caractère ajouté à la fin de la chaine
+				val = val.substring(0, val.length() - 1); //on retire le caractère ajouté à la fin de la chaine (voir javadoc de la fonction)
 				
-				val = readFilePartCharacter(fr, val, c, i, j); //partie traitement d'un caractère
+				val = readFilePartCharacter(fr, val, c, ite); //partie traitement d'un caractère
 				c = val.charAt(val.length() - 1); //récupérer le caractère stocké dans la chaine
-				val = val.substring(0, val.length() - 1); //on retire le caractère ajouté à la fin de la chaine
+				val = val.substring(0, val.length() - 1); //on retire le caractère ajouté à la fin de la chaine (voir javadoc de la fonction)
 				
 			}
-			csv[i][j] = val;
-			if(val.length() == 0)j++;
-			i = 0;
+			csv[ite[0]][ite[1]] = val;
+			ite[1]++;
+			if(ite[0] == 0 && val.length() == 0)ite[1]--; //si la ligne est vide
+			else if(ite[0]+1 != size1D) { //si des valeurs sont manquantes
+				System.err.println("Found " + ite[0] + "/" + size1D + " values at line " + ite[1]);
+				csv[ite[0]][ite[1]] = "";
+			}
+			ite[0] = 0;
 			val = "";
+			c = 0;
 		}
 		fr.close();
 	}
