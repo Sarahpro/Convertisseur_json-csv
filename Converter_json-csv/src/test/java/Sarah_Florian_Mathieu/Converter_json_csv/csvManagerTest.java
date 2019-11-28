@@ -27,23 +27,22 @@ public class csvManagerTest {
 			f.createNewFile();
 			f.deleteOnExit();
 		}
-		
-		f = new File("CsvFile.csv");
-		if(f.exists() == false) {
-			f.createNewFile();
-			f.deleteOnExit();
-		}
-		
-		OutputStreamWriter fw = new OutputStreamWriter(new FileOutputStream("CsvFile.csv"));
-		fw.write("marque,nom,quantité,produit, prix\n"
-				+ "Andros,\"yaourt au citron\",2,yaourt,1.50\n"
-				+ "\"La laitière\",\"yaourt à la vanille\",5,yaourt,2.50\n");
-		fw.close();
 	}
 	
 	@After
-	public void tearDown() {
-		
+	public void tearDown() throws IOException {
+		File f = new File("CsvFile.csv");
+		if(f.exists()) f.deleteOnExit();
+		f = new File("CsvFile2.csv");
+		if(f.exists()) f.deleteOnExit();
+		f = new File("CsvFile3.csv");
+		if(f.exists()) f.deleteOnExit();
+		f = new File("CsvFile4.csv");
+		if(f.exists()) f.deleteOnExit();
+		f = new File("CsvFile5.csv");
+		if(f.exists()) f.deleteOnExit();
+		f = new File("CsvFile6.csv");
+		if(f.exists()) f.deleteOnExit();
 	}
 	
 	@Test
@@ -100,7 +99,7 @@ public class csvManagerTest {
 	@Test (expected = FileNotFoundException.class)
 	public void testFileNotFound() throws IllegalArgumentException, IOException, NonReadableCsvFileException {
 		csvManager csv = new csvManager ();
-		csv.loadFile("fichierInexistant.csv");
+		csv.loadFile("FileNotFound.csv");
 	}
 	
 	@Test (expected = IllegalArgumentException.class)
@@ -110,14 +109,82 @@ public class csvManagerTest {
 	}
 	
 	@Test (expected = NonReadableCsvFileException.class)
-	public void testCalculSize() throws IllegalArgumentException, IOException, NonReadableCsvFileException {
+	public void testEmptyFile() throws IllegalArgumentException, IOException, NonReadableCsvFileException {
 		csvManager csv = new csvManager ();
 		csv.loadFile("TestCsvType.csv");
 	}
 	
+	/*
+	 * Tests unitaires sur la détection d'erreur dans la syntaxe d'un fichier csv 
+	 */
+	
 	@Test
-	public void testLectureFile() throws IllegalArgumentException, IOException, NonReadableCsvFileException {
+	public void testLectureFileEffective() throws IllegalArgumentException, IOException, NonReadableCsvFileException {
+		OutputStreamWriter fw = new OutputStreamWriter(new FileOutputStream("CsvFile.csv"));
+		fw.write("marque,nom,\tquantité,produit, prix\n"
+				+ "\n"
+				+ "Andros,\"yaourt au citron\",2,yaourt,1.50\n"
+				+ "            \t\n"
+				+ "\"La laitière\",\"yaourt à la \\\"vanille\\\"\",5,yaourt,2.50\n");
+		fw.close();
 		csvManager csv = new csvManager ();
 		csv.loadFile("CsvFile.csv");
+		assertTrue(csv.getStringAt(2, 2).equalsIgnoreCase("5"));
+	}
+	
+	@Test (expected = NonReadableCsvFileException.class)
+	public void testLectureFileTooMuchValues() throws IOException, IllegalArgumentException, NonReadableCsvFileException {
+		OutputStreamWriter fw = new OutputStreamWriter(new FileOutputStream("CsvFile2.csv"));
+		fw.write("marque,nom,quantité,produit,prix\n"
+				+ "Andros,\"yaourt au citron\",2,yaourt,1.50,\n"
+				+ "\"La laitière\",\"yaourt à la vanille\",5,yaourt,2.50\n");
+		fw.close();
+		csvManager csv = new csvManager ();
+		csv.loadFile("CsvFile2.csv");
+	}
+	
+	@Test
+	public void testLectureFileMissingValues() throws IOException, IllegalArgumentException, NonReadableCsvFileException {
+		OutputStreamWriter fw = new OutputStreamWriter(new FileOutputStream("CsvFile3.csv"));
+		fw.write("marque,nom,quantité,produit,prix\n"
+				+ "Andros,\"yaourt au citron\",2,yaourt,1.50\n"
+				+ "\"La laitière,yaourt à la vanille\",5,yaourt,2.50\n");
+		fw.close();
+		csvManager csv = new csvManager ();
+		csv.loadFile("CsvFile3.csv");
+		assertTrue(csv.getStringAt(4, 2) == "");
+	}
+	
+	@Test (expected = NonReadableCsvFileException.class)
+	public void testLectureFileValueWithQuoteUnfinished() throws IllegalArgumentException, IOException, NonReadableCsvFileException {
+		OutputStreamWriter fw = new OutputStreamWriter(new FileOutputStream("CsvFile4.csv"));
+		fw.write("marque,nom,quantité,produit, prix\n"
+				+ "Andros,\"yaourt au citron\",2,yaourt,\"1.50\n"
+				+ "\"La laitière\",\"yaourt à la vanille\",5,yaourt,2.50\n");
+		fw.close();
+		csvManager csv = new csvManager ();
+		csv.loadFile("CsvFile4.csv");
+	}
+	
+	@Test (expected = NonReadableCsvFileException.class)
+	public void testLectureFileStringBeforeQuote() throws IllegalArgumentException, IOException, NonReadableCsvFileException {
+		OutputStreamWriter fw = new OutputStreamWriter(new FileOutputStream("CsvFile5.csv"));
+		fw.write("marque,nom,quantité,produit, prix\n"
+				+ "Andros,\"yaourt au citron\",2,yaourt,\1.50\n"
+				+ "\"La laitière\",yaourt à la \"vanille\",5,yaourt,2.50\n");
+		fw.close();
+		csvManager csv = new csvManager ();
+		csv.loadFile("CsvFile5.csv");
+	}
+	
+	@Test (expected = NonReadableCsvFileException.class)
+	public void testLectureFileStringAfterQuote() throws IllegalArgumentException, IOException, NonReadableCsvFileException {
+		OutputStreamWriter fw = new OutputStreamWriter(new FileOutputStream("CsvFile6.csv"));
+		fw.write("marque,nom,quantité,produit, prix\n"
+				+ "Andros,\"yaourt au citron\",2,yaourt,\1.50\n"
+				+ "\"La laitière\",yaourt à la \"vanille\",5,yaourt,2.50\n");
+		fw.close();
+		csvManager csv = new csvManager ();
+		csv.loadFile("CsvFile6.csv");
 	}
 }

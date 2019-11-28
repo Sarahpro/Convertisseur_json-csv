@@ -1,11 +1,9 @@
 package Sarah_Florian_Mathieu.Converter_json_csv;
 
-import java.io.EOFException;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
-import java.util.IllegalFormatException;
 
 public class csvManager {
 	private static final String dimSeparator = "__|__";
@@ -17,16 +15,29 @@ public class csvManager {
 	private int size1D;
 	private int size2D;
 
+	
 	//getters and setters
 	
+	/**
+	 * identify multiple dimensions of json file
+	 * @return which separator used to identify dimensions above 2
+	 */
 	public static final String getDimSeparator() {
 		return dimSeparator;
 	}
 	
+	/**
+	 * get the separator for values
+	 * @return character used to separate values
+	 */
 	public char getSeparator() {
 		return separator;
 	}
 
+	/**
+	 * change value of separator for values if possible
+	 * @param separator which character to update
+	 */
 	public void setSeparator(char separator) {
 		this.separator = separator;
 		try{
@@ -37,10 +48,18 @@ public class csvManager {
 		}
 	}
 
+	/**
+	 * get the separator for decimals
+	 * @return character used to separate in decimals
+	 */
 	public char getDecimalSeparator() {
 		return decimalSeparator;
 	}
 
+	/**
+	 * change value of separator for decimals if possible
+	 * @param decimalSeparator which character to update
+	 */
 	public void setDecimalSeparator(char decimalSeparator) {
 		this.decimalSeparator = decimalSeparator;
 		try{
@@ -51,14 +70,28 @@ public class csvManager {
 		}
 	}
 	
+	/**
+	 * get the size of the first dimension of array
+	 * @return size of the first dimension of array
+	 */
 	public int getSize1D() {
 		return size1D;
 	}
 
+	/**
+	 * get the size of the second dimension of array
+	 * @return size of the second dimension of array
+	 */
 	public int getSize2D() {
 		return size2D;
 	}
 	
+	/**
+	 * get the string value at i,j position in array
+	 * @param i which position in first dimension of array
+	 * @param j which position in second dimension of array
+	 * @return string value at i,j position in array
+	 */
 	public String getStringAt(int i, int j) {
 		if(csv != null) {
 			try {
@@ -73,6 +106,9 @@ public class csvManager {
 		else return null;
 	}
 	
+	/**
+	 * convert array into string
+	 */
 	public String toString() {
 		String s = "";
 		int x,y;
@@ -80,10 +116,10 @@ public class csvManager {
 		if(csv == null) return "csv File is not loaded";
 		
 		for(y = 0; y < size2D; y++) {
-			for(x = 0; x < size1D; x++) {
+			for(x = 0; x < size1D - 1; x++) {
 				s += csv[x][y] + ',';
 			}
-			s += '\n';
+			s += csv[x][y] + '\n';
 		}
 		return s;
 	}
@@ -92,9 +128,9 @@ public class csvManager {
 	
 	/**
 	 * Construction of csvManager with customs separators
-	 * @param separator
-	 * @param decimalSeparator
-	 * @throws IllegalArgumentException
+	 * @param separator to separate the values
+	 * @param decimalSeparator for decimals
+	 * @throws IllegalArgumentException invalid separator
 	 */
 	public csvManager(char separator, char decimalSeparator) throws IllegalArgumentException {
 		this.separator = separator;
@@ -109,7 +145,7 @@ public class csvManager {
 	
 	/**
 	 * Construction of csvManager with English separators
-	 * @throws IllegalArgumentException
+	 * @throws IllegalArgumentException invalid separator
 	 */
 	public csvManager() throws IllegalArgumentException {
 		this(',', '.');
@@ -117,7 +153,7 @@ public class csvManager {
 	
 	/**
 	 * Check if actually separators are the same or not an allowed separator 
-	 * @throws IllegalArgumentException
+	 * @throws IllegalArgumentException invalid separator
 	 */
 	private void checkValidSeparator() throws IllegalArgumentException {
 		if(separator == decimalSeparator) {
@@ -146,9 +182,9 @@ public class csvManager {
 	/**
 	 * read csv files if possible and store data in array of String
 	 * @param path which file to process
-	 * @throws IllegalArgumentException
-	 * @throws IOException
-	 * @throws NonReadableCsvFileException 
+	 * @throws IllegalArgumentException problem with path
+	 * @throws IOException read the file
+	 * @throws NonReadableCsvFileException syntax error or problem with values
 	 */
 	public void loadFile(String path) throws IllegalArgumentException, IOException, NonReadableCsvFileException {
 		checkPath(path);
@@ -159,8 +195,8 @@ public class csvManager {
 	/**
 	 * check if path refer to a valid file
 	 * @param path which file to process
-	 * @throws IllegalArgumentException
-	 * @throws IOException
+	 * @throws IllegalArgumentException problem with path
+	 * @throws IOException problem reading the file
 	 */
 	private void checkPath(String path) throws IllegalArgumentException, IOException {
 		if(path == null) {
@@ -186,8 +222,8 @@ public class csvManager {
 	/**
 	 * computes table size from file with separators and rows
 	 * @param path which file to process
-	 * @throws NonReadableCsvFileException 
-	 * @throws IOException 
+	 * @throws NonReadableCsvFileException syntax error or problem with values
+	 * @throws IOException read the file
 	 */
 	private void calculSizeTab(String path) throws NonReadableCsvFileException, IOException {
 		FileReader fr = null;
@@ -230,6 +266,11 @@ public class csvManager {
 		size1D = cptSeparator + 1;
 		size2D = nbLines;
 		csv = new String[size1D][size2D];
+		
+		int x,y;
+		for(y = 0; y < size2D; y++) 
+			for(x = 0; x < size1D; x++) 
+				csv[x][y] = "";
 	}
 	
 	/**
@@ -240,8 +281,8 @@ public class csvManager {
 	 * @param i variable that increment on the column
 	 * @param j variable that increment on the row
 	 * @return string containing value AND the last character read that must be removed after
-	 * @throws NonReadableCsvFileException 
-	 * @throws IOException 
+	 * @throws NonReadableCsvFileException syntax error or problem with values
+	 * @throws IOException read the file
 	 */
 	private String readFilePartString(FileReader fr, String val, int c, int i, int j) throws NonReadableCsvFileException, IOException {
 		if(c == '"' && val.length() == 0) { //traitement d'une chaine de caractère
@@ -249,7 +290,7 @@ public class csvManager {
 				c = fr.read();
 				if(c == '\\') { //traitement d'un caractère précédé d'un <\>
 					c = fr.read();
-					if(c == '"' || c == '\\') val += c;
+					if(c == '"' || c == '\\') val += (char)c;
 					else System.err.println("Warning : ignored character at line " + j);
 					if(c != '\n' && c != -1) {
 						c = fr.read();
@@ -280,8 +321,8 @@ public class csvManager {
 	 * @param i variable that increment on the column
 	 * @param j variable that increment on the row
 	 * @return string containing value AND the last character read that must be removed after
-	 * @throws IOException
-	 * @throws NonReadableCsvFileException 
+	 * @throws IOException read the file
+	 * @throws NonReadableCsvFileException syntax error or problem with values
 	 */
 	private String readFilePartCharacter(FileReader fr, String val, int c, int [] ite) throws IOException, NonReadableCsvFileException {
 		boolean save = true;
@@ -298,7 +339,7 @@ public class csvManager {
 			ite[0]++;
 			save = false;
 			if(ite[0] == size1D) {
-				System.err.println("too many values to read at line" + ite[1]);
+				System.err.println("too many values to read at line " + ite[1]);
 				fr.close();
 				throw new NonReadableCsvFileException();
 			}
@@ -321,9 +362,9 @@ public class csvManager {
 	
 	/**
 	 * read the csv file and store data in array
-	 * @param path
-	 * @throws IOException
-	 * @throws NonReadableCsvFileException 
+	 * @param path which file to read
+	 * @throws IOException read the file
+	 * @throws NonReadableCsvFileException syntax error or problem with values
 	 */
 	private void readFile(String path) throws IOException, NonReadableCsvFileException {
 		FileReader fr = null;
@@ -349,8 +390,7 @@ public class csvManager {
 			ite[1]++;
 			if(ite[0] == 0 && val.length() == 0)ite[1]--; //si la ligne est vide
 			else if(ite[0]+1 != size1D) { //si des valeurs sont manquantes
-				System.err.println("Found " + ite[0] + "/" + size1D + " values at line " + ite[1]);
-				csv[ite[0]][ite[1]] = "";
+				System.err.println("Warning : Found " + (ite[0] + 1) + "/" + size1D + " values at line " + ite[1]);
 			}
 			ite[0] = 0;
 			val = "";
@@ -358,4 +398,11 @@ public class csvManager {
 		}
 		fr.close();
 	}
+	
+	
+	public void saveAs(String path) {
+		
+	}
+	
+	
 }
