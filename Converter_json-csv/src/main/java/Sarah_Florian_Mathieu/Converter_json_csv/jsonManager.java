@@ -21,5 +21,20 @@ public class jsonManager {
         this.Hk_number = 0;
     }
 
+    /**
+     * 
+     */
+    public void ajoutSeparator(){
+
+    }
+
+    /**
+     * Verify the correct number of separators
+     * @return true if numbers of open separators - close separators = 0 or false
+     */
+    public boolean verifseparator(){
+
+    }
+
 
 }
