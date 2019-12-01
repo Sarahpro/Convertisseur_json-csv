@@ -13,10 +13,6 @@ public enum App
 	
     public static void main( String[] args ) throws IllegalArgumentException, IOException, NonReadableCsvFileException
     {
-    	csvManager csv = new csvManager ();
-		//csv.loadFile("CsvFile.csv");
-		System.out.println(csv);
+    	
     }
-    
-    csvManager m = new csvManager();
 }

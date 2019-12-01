@@ -2,8 +2,11 @@ package Sarah_Florian_Mathieu.Converter_json_csv;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
 
 public class csvManager {
 	private static final String dimSeparator = "__|__";
@@ -87,10 +90,10 @@ public class csvManager {
 	}
 	
 	/**
-	 * get the string value at i,j position in array
+	 * get the string value at i,j position in array if possible
 	 * @param i which position in first dimension of array
 	 * @param j which position in second dimension of array
-	 * @return string value at i,j position in array
+	 * @return string value at i,j position in array if possible
 	 */
 	public String getStringAt(int i, int j) {
 		if(csv != null) {
@@ -107,13 +110,13 @@ public class csvManager {
 	}
 	
 	/**
-	 * convert array into string
+	 * the returned string contains each box in the table , the columns are separated by a comma and the lines are separated from a new line
 	 */
 	public String toString() {
 		String s = "";
 		int x,y;
 		
-		if(csv == null) return "csv File is not loaded";
+		if(csv == null) return "null";
 		
 		for(y = 0; y < size2D; y++) {
 			for(x = 0; x < size1D - 1; x++) {
@@ -172,9 +175,10 @@ public class csvManager {
 		case '/' :
 		case '&' :
 		case ':' :
-		case ' ' : /* separator allowed */ break;
+		case ' ' :
+		case '\t' : /* separator allowed */ break;
 		default : 
-			System.err.println("Separator for compartment must be one of them {<,>,<;>,<|>,<#>,</>,<&>,<:>,< >}");
+			System.err.println("Separator for compartment must be one of them {<,>,<;>,<|>,<#>,</>,<&>,<:>,< >, <tabulation>}");
 			throw new IllegalArgumentException();
 		}
 	}
@@ -222,39 +226,41 @@ public class csvManager {
 	/**
 	 * computes table size from file with separators and rows
 	 * @param path which file to process
-	 * @throws NonReadableCsvFileException syntax error or problem with values
+	 * @throws NonReadableCsvFileException if file is empty
 	 * @throws IOException read the file
 	 */
 	private void calculSizeTab(String path) throws NonReadableCsvFileException, IOException {
 		FileReader fr = null;
 		fr = new FileReader(path);
 		int c = 0;
-		
+		boolean emptyLine = true;
 		//calcul de size1D
-		boolean ignore = false;
 		int cptSeparator = 0;
 		while(c != '\n' && c != -1) {
 			c = fr.read();
-			if(c == separator && !ignore) cptSeparator++;
-			if(c == '"')ignore = !ignore;
-			if(c == '\\') c = fr.read();
+			//si un caractère lu n'est pas un caractère blanc la ligne n'est pas vide
+			if(c != '\n' && c != ' ' && c != '\t' && c != -1) emptyLine = false;
+			if(c == separator) cptSeparator++;
 		}
 		//fin de calcul de size1D
 		
-		if(cptSeparator == 0) {
+		if(cptSeparator == 0 && emptyLine) {
 			fr.close();
-			System.err.println("Empty File");
+			System.err.println(path + " is empty");
 			throw new NonReadableCsvFileException();
 		}
 		
 		//calcul de size2D
-		boolean emptyLine = true;
 		int nbLines = 1;
+		emptyLine = true;
 		while (c != -1) {
 			c = 0;
 			while(c != '\n' && c != -1) {
 				c = fr.read();
-				if(c != '\n' && c != ' ' && c != '\t') emptyLine = false;
+				//si un caractère lu n'est pas un caractère blanc la ligne n'est pas vide
+				if(c != '\n' && c != ' ' && c != '\t' && emptyLine == true) emptyLine = false;
+				//si un espace ou une tabulation est lu et que c'est le séparateur alors la ligne n'est pas vide
+				if(((c == ' ' && separator == ' ') || (c == '\t' && separator == '\t')) && emptyLine == true) emptyLine = false; 
 			}
 			if(!emptyLine && c != -1)nbLines++;
 			emptyLine = true;
@@ -274,93 +280,6 @@ public class csvManager {
 	}
 	
 	/**
-	 * A part of readFile() that treats strings (when <"> found)
-	 * @param fr variable to read the current file
-	 * @param val store the value at the compartment (i,j)
-	 * @param c variable that store the character read
-	 * @param i variable that increment on the column
-	 * @param j variable that increment on the row
-	 * @return string containing value AND the last character read that must be removed after
-	 * @throws NonReadableCsvFileException syntax error or problem with values
-	 * @throws IOException read the file
-	 */
-	private String readFilePartString(FileReader fr, String val, int c, int i, int j) throws NonReadableCsvFileException, IOException {
-		if(c == '"' && val.length() == 0) { //traitement d'une chaine de caractère
-			do {
-				c = fr.read();
-				if(c == '\\') { //traitement d'un caractère précédé d'un <\>
-					c = fr.read();
-					if(c == '"' || c == '\\') val += (char)c;
-					else System.err.println("Warning : ignored character at line " + j);
-					if(c != '\n' && c != -1) {
-						c = fr.read();
-					}
-				}
-				if(c == '\n' || c == -1) {
-					System.err.println("Non-readable File, problem found at line " + j);
-					fr.close();
-					throw new NonReadableCsvFileException();
-				}
-				else if(c != '"') val += (char)c;
-			}while(c != '"');
-			c = fr.read();
-			if(c != '\n' && c != -1 && c != separator){ // s'il existe encore des caractères pour la valeur de la case
-				System.err.println("Non-readable File, problem found at line " + j);
-				fr.close();
-				throw new NonReadableCsvFileException();
-			}
-		}
-		return val + (char)c; //afin de retourner le caractère lu avec la chaine
-	}
-	
-	/**
-	 * A part of readFile() that treats characters
-	 * @param fr variable to read the current file
-	 * @param val store the value at the compartment (i,j)
-	 * @param c variable that store the character read
-	 * @param i variable that increment on the column
-	 * @param j variable that increment on the row
-	 * @return string containing value AND the last character read that must be removed after
-	 * @throws IOException read the file
-	 * @throws NonReadableCsvFileException syntax error or problem with values
-	 */
-	private String readFilePartCharacter(FileReader fr, String val, int c, int [] ite) throws IOException, NonReadableCsvFileException {
-		boolean save = true;
-		if(c == '\\') { //traitement d'un caractère précédé d'un <\>
-			c = fr.read();
-			if(c == '"' || c == '\\') val += (char)c;
-			else System.err.println("Warning : only <\\> or <\"> are accepted after <\\>. See at line " + ite[1]);
-			if(c != '\n' && c != -1) c = fr.read();
-		}
-		
-		if(c == separator) { //traitement du caractère de séparation de colonne 
-			csv[ite[0]][ite[1]] = val;
-			val = "";
-			ite[0]++;
-			save = false;
-			if(ite[0] == size1D) {
-				System.err.println("too many values to read at line " + ite[1]);
-				fr.close();
-				throw new NonReadableCsvFileException();
-			}
-		}
-		if(c == ' ' || c == '\t') { //traitement d'un caractère blanc
-			System.err.println("Warning : ignored tabulation or space character found at line " + ite[1]);
-			save = false;
-		}
-		if(c == '"' && val.length() > 0) { //si l'on lit une chaine de caractère alors que l'on a déjà lu un bout de valeur
-			System.err.println("Non-readable File, problem found at line " + ite[1]);
-			fr.close();
-			throw new NonReadableCsvFileException();
-		}
-		if(c == '\n') save = false;
-		
-		if(save) val += (char)c;
-		
-		return val + (char)c;
-	}
-	
-	/**
 	 * read the csv file and store data in array
 	 * @param path which file to read
 	 * @throws IOException read the file
@@ -371,38 +290,163 @@ public class csvManager {
 		fr = new FileReader(path);
 		int c = 0;
 		String val = "";
-		int[] ite = new int[2];
-		ite[0] = ite[1] = 0;
+		int i = 0, j = 0;
 		
-		while(c != -1 && ite[1] != size2D) {
+		while(c != -1 && j != size2D) {
 			while(c != '\n' && c != -1) {
 				c = fr.read();
-				val = readFilePartString(fr, val, c, ite[0], ite[1]); //partie traitement d'une chaine de caractère
-				c = val.charAt(val.length() - 1); //récupérer le caractère stocké dans la chaine
-				val = val.substring(0, val.length() - 1); //on retire le caractère ajouté à la fin de la chaine (voir javadoc de la fonction)
 				
-				val = readFilePartCharacter(fr, val, c, ite); //partie traitement d'un caractère
-				c = val.charAt(val.length() - 1); //récupérer le caractère stocké dans la chaine
-				val = val.substring(0, val.length() - 1); //on retire le caractère ajouté à la fin de la chaine (voir javadoc de la fonction)
+				if(c == separator) { //traitement du caractère de séparation de colonne
+					if(val.charAt(0) == '"' && (val.charAt(val.length() - 1) != '"' || val.length() == 1)) { //si le separateur est dans une chaine de caractere, on le sauvegarde
+						val += (char)c;
+					}
+					else {
+						if(val.charAt(0) == '"' && val.endsWith("\"") && val.length() > 2) val = val.substring(1, val.length() - 1);
+						if(val.length() < 3 && val.charAt(0) == '"' && val.endsWith("\"")) val = "";
+						csv[i][j] = val;
+						val = "";
+						i++;
+						if(i == size1D) {
+							System.err.println("too many values to read at line " + j);
+							fr.close();
+							throw new NonReadableCsvFileException();
+						}
+					}
+				}
 				
+				//si la ligne ne contient que des tabulations ou des espaces, la ligne sera ignoré sauf si le separateur est defini sur espace ou tabulation
+				else if(!(((c == ' ') || c == '\t') && val.length() == 0) && c != '\n') {
+					val += (char)c;
+				}
 			}
-			csv[ite[0]][ite[1]] = val;
-			ite[1]++;
-			if(ite[0] == 0 && val.length() == 0)ite[1]--; //si la ligne est vide
-			else if(ite[0]+1 != size1D) { //si des valeurs sont manquantes
-				System.err.println("Warning : Found " + (ite[0] + 1) + "/" + size1D + " values at line " + ite[1]);
+			csv[i][j] = val;
+			j++;
+			if(i == 0 && val.length() == 0)j--; //si la ligne est vide
+			else if(i+1 != size1D) { //si des valeurs sont manquantes
+				System.err.println("Warning : Found " + (i + 1) + "/" + size1D + " values at line " + j);
 			}
-			ite[0] = 0;
+			i = 0;
 			val = "";
-			c = 0;
+			if(c != -1) c = 0;
 		}
 		fr.close();
 	}
 	
-	
-	public void saveAs(String path) {
+	/**
+	 * check if name of new csv file is available
+	 * @param name name of the new file
+	 * @throws IllegalArgumentException if incorrect name of unavailable name is given
+	 */
+	private void checkNameForSave(String name) throws IllegalArgumentException {
+		if(name == null) {
+			System.err.println("name is not selected");
+			throw new IllegalArgumentException();
+		}
+		if(name.equals("")) {
+			System.err.println("Name given is empty");
+			throw new IllegalArgumentException();
+		}
 		
+		File f = new File(name + ".csv");
+		if(f.exists() == true) {
+			System.err.println("File " + name + ".csv already exists");
+			throw new IllegalArgumentException();
+		}
 	}
 	
+	/**
+	 * replace a char at the position i by the newChar
+	 * @param s string in which a character must be replaced
+	 * @param i position of character to replace
+	 * @param newChar character that will replace the character at position i
+	 * @return string with change
+	 */
+	private String changeChar(String s, int i, char newChar) {
+		String chaine = "";
+		String chaine2 = "";
+		int a;
+		if(i < s.length()) {
+			for(a = 0; a < i; a++)
+				chaine += s.charAt(a);
+			a++;
+			for(; a < s.length(); a++)
+				chaine2 += s.charAt(a);
+		}
+		return chaine + newChar + chaine2;
+	}
 	
+	/**
+	 * write in the number format if param s can be cast in Double or Integer type
+	 * @param fw to write in the file
+	 * @param s string to test if is number
+	 * @return false if param s can't be cast as a number, true else
+	 * @throws IOException if problem to write
+	 */
+	private boolean tryWriteNumber(OutputStreamWriter fw, String s) throws IOException {
+		String work = "" + s;
+		if(decimalSeparator == ',') {
+			for(int i = 0; i < work.length(); i++) {
+				if((work.charAt(i) < '0' || work.charAt(i) > '9') && work.charAt(i) != '-' && work.charAt(i) != decimalSeparator) return false;
+				else if(work.charAt(i) == decimalSeparator) work = changeChar(work,i,'.');
+			}
+		}
+		try {
+			Double.parseDouble(work);
+			fw.write(s);
+		}
+		catch(java.lang.NumberFormatException e) {
+			try{
+				Integer.parseInt(work);
+				fw.write(s);
+			}
+			catch(java.lang.NumberFormatException e2) {
+				return false;
+			}
+		}
+		return true;
+	}
+	
+	/**
+	 * write the table csv in the file
+	 * @param name name of the new csv file
+	 * @throws IOException if problem to write
+	 */
+	private void writeToFile(String name) throws IOException {
+		OutputStreamWriter fw = new OutputStreamWriter(new FileOutputStream(name));
+		int i,j;
+		for(i = 0; i < size1D - 1; i++) {
+			fw.write(csv[i][0] + separator);
+		}
+		fw.write(csv[i][0] + "\n");
+		
+		for(j = 1; j < size2D; j++) {
+			for(i = 0; i < size1D - 1; i++) {
+				if(!tryWriteNumber(fw,csv[i][j])) {
+					fw.write("\"");
+					fw.write(csv[i][j]);
+					fw.write("\"");
+				}
+				fw.write(separator);
+			}
+			if(!tryWriteNumber(fw,csv[i][j])) {
+				fw.write("\"");
+				fw.write(csv[i][j]);
+				fw.write("\"");
+			}
+			fw.write("\n");
+		}
+		fw.close();
+	}
+	
+	/**
+	 * save the array csv in the file specified in the parameter name
+	 * @param name name of the new csv file (the .csv suffix is automatically added)
+	 * @throws IOException if problem to write
+	 * @throws IllegalArgumentException if name is incorrect or unavailable
+	 */
+	public void saveAs(String name) throws IOException, IllegalArgumentException {
+		checkNameForSave(name);
+		name += ".csv";
+		writeToFile(name);
+	}
 }

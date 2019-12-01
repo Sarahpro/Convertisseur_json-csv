@@ -33,7 +33,7 @@ public class jsonManager {
      * @return true if numbers of open separators - close separators = 0 or false
      */
     public boolean verifseparator(){
-
+    	return true;
     }
 
 
