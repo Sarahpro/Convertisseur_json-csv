@@ -113,15 +113,11 @@ public class csvManagerTest {
 		csv.loadFile("TestFileNotCsv.txt");
 	}
 	
-
-	
-	//fichier ouvert
 	@Test (expected = NonReadableCsvFileException.class)
 	public void testEmptyFile() throws IllegalArgumentException, IOException, NonReadableCsvFileException {
 		csvManager csv = new csvManager ();
 		csv.loadFile("TestCsvType.csv");
 	}
-	
 	
 	/*
 	 * Tests unitaires sur la détection d'erreur dans un fichier csv 
@@ -156,36 +152,7 @@ public class csvManagerTest {
 		csv.loadFile("CsvFile3.csv");
 		assertTrue(csv.getStringAt(4, 2) == "");
 	}
-	 //test separateur  ; du csv
-	@Test
-	public void testSeparateurautre() throws IOException, IllegalArgumentException, NonReadableCsvFileException {
-		
-		OutputStreamWriter fw = new OutputStreamWriter(new FileOutputStream("CsvFile5.csv"));
-		fw.write("marque;nom;quantité;produit;prix\n"
-						+ "Andros\";yaourt au citron\";2;yaourt;1.50\n"
-					
-					+ "\"La laitière\";\"yaourt à la vanille\";5;yaourt;2.50\n");
-		fw.close();
-		csvManager csv = new csvManager();
-		csv.loadFile("CsvFile5.csv");
-		
-			
-	}
-	 //test different separateur du csv
-		@Test (expected = IOException.class)
-		public void testSeparateur ()throws IOException, IllegalArgumentException, NonReadableCsvFileException {
-			
-			OutputStreamWriter fw = new OutputStreamWriter(new FileOutputStream("CsvFile5.csv"));
-			fw.write("marque;nom;quantité;produit;prix\n"
-							+ "Andros\",yaourt au citron\",2,yaourt;1.50\n"
-						
-						+ "\"La laitière\";\"yaourt à la vanille\";5;yaourt;2.50\n");
-			fw.close();
-			csvManager csv = new csvManager();
-			//exception
-			
-				
-		}
+	
 	@Test (expected = IllegalArgumentException.class)
 	public void saveWithNameNull() throws IllegalArgumentException, IOException, NonReadableCsvFileException {
 		csvManager csv = new csvManager ();
